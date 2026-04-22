@@ -62,6 +62,7 @@ export async function ingestRoutes(app: FastifyInstance): Promise<void> {
    * POST /ingest/upload
    * multipart/form-data with one or more file fields named "logs" (or any field name ending in .log).
    * Saves uploads to temp paths and runs the same ingestion pipeline (then deletes temp files).
+   * For large uploads (>100MB), uses higher concurrency for faster parallel processing.
    */
   app.post('/ingest/upload', async (req, reply) => {
     const current = getIngestStatus();
@@ -74,6 +75,7 @@ export async function ingestRoutes(app: FastifyInstance): Promise<void> {
 
     const tempPaths: string[] = [];
     fs.mkdirSync(UPLOAD_TMP_DIR, { recursive: true });
+    let totalSize = 0;
 
     try {
       const parts = req.parts();
@@ -91,7 +93,15 @@ export async function ingestRoutes(app: FastifyInstance): Promise<void> {
           UPLOAD_TMP_DIR,
           `${Date.now()}_${randomBytes(8).toString('hex')}_${safeBase}`
         );
-        await pipeline(part.file, fs.createWriteStream(dest));
+        
+        // Track file size as it streams for concurrency adjustment
+        let fileSize = 0;
+        const measureStream = part.file.on('data', (chunk) => {
+          fileSize += chunk.length;
+          totalSize += chunk.length;
+        });
+        
+        await pipeline(measureStream, fs.createWriteStream(dest));
         tempPaths.push(dest);
       }
     } catch (err) {
@@ -115,7 +125,10 @@ export async function ingestRoutes(app: FastifyInstance): Promise<void> {
       } satisfies ApiResponse<never>);
     }
 
-    ingestFiles(tempPaths, { deleteSourcesAfter: true }).catch(err => {
+    // Use consistent concurrency: 6 workers for normal loads, 10 for massive uploads (>20GB)
+    const concurrency = totalSize > 20_000_000_000 ? 10 : 6;
+
+    ingestFiles(tempPaths, { deleteSourcesAfter: true, concurrency }).catch(err => {
       console.error('[route /ingest/upload] Unhandled error:', err);
     });
 
@@ -124,7 +137,7 @@ export async function ingestRoutes(app: FastifyInstance): Promise<void> {
       data: {
         accepted: tempPaths.length,
         skipped: [] as Array<{ path: string; reason: string }>,
-        message: 'Upload accepted. Ingestion started. Poll GET /ingest/status for progress.',
+        message: `Upload accepted (${(totalSize / 1024 / 1024 / 1024).toFixed(1)}GB). Ingestion started with ${concurrency} workers. Poll GET /ingest/status for progress.`,
       },
     } satisfies ApiResponse<unknown>);
   });

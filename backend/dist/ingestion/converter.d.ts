@@ -3,9 +3,11 @@ export declare function getIngestStatus(): IngestStatus;
 export type IngestFilesOptions = {
     /** Remove each source file after processing (e.g. browser upload temp files). */
     deleteSourcesAfter?: boolean;
+    /** Number of files to process concurrently (default: 3) */
+    concurrency?: number;
 };
 /**
- * Ingest a list of .log file paths.
+ * Ingest a list of .log file paths in parallel.
  * Parses each file, writes to Parquet, registers a unified DuckDB view.
  * Non-blocking — returns immediately, progress via getIngestStatus().
  */
@@ -13,6 +15,7 @@ export declare function ingestFiles(filePaths: string[], options?: IngestFilesOp
 /**
  * Register a unified DuckDB view over ALL parquet files.
  * This is the view all forensic queries run against.
+ * Includes ANALYZE for better query planning.
  */
 export declare function registerUnifiedView(): Promise<void>;
 /** Check if parquet data already exists (for /files endpoint) */

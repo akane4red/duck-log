@@ -9,6 +9,11 @@ export interface ParseResult {
 /**
  * Parse a single IIS .log file into normalized LogRow array.
  * Streams line-by-line so large files never fully load into memory.
+ * Optimized for speed: fast string splitting, minimal allocations.
  */
-export declare function parseLogFile(filePath: string, onProgress?: (linesRead: number) => void): Promise<ParseResult>;
+export declare function parseLogFile(filePath: string, onProgress?: (progress: {
+    linesRead: number;
+    bytesRead: number;
+    totalBytes: number;
+}) => void): Promise<ParseResult>;
 //# sourceMappingURL=parser.d.ts.map

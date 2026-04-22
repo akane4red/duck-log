@@ -87,6 +87,7 @@ async function ingestRoutes(app) {
      * POST /ingest/upload
      * multipart/form-data with one or more file fields named "logs" (or any field name ending in .log).
      * Saves uploads to temp paths and runs the same ingestion pipeline (then deletes temp files).
+     * For large uploads (>100MB), uses higher concurrency for faster parallel processing.
      */
     app.post('/ingest/upload', async (req, reply) => {
         const current = (0, converter_1.getIngestStatus)();
@@ -98,6 +99,7 @@ async function ingestRoutes(app) {
         }
         const tempPaths = [];
         fs.mkdirSync(UPLOAD_TMP_DIR, { recursive: true });
+        let totalSize = 0;
         try {
             const parts = req.parts();
             for await (const part of parts) {
@@ -111,7 +113,13 @@ async function ingestRoutes(app) {
                 }
                 const safeBase = path.basename(name);
                 const dest = path.join(UPLOAD_TMP_DIR, `${Date.now()}_${(0, crypto_1.randomBytes)(8).toString('hex')}_${safeBase}`);
-                await (0, promises_1.pipeline)(part.file, fs.createWriteStream(dest));
+                // Track file size as it streams for concurrency adjustment
+                let fileSize = 0;
+                const measureStream = part.file.on('data', (chunk) => {
+                    fileSize += chunk.length;
+                    totalSize += chunk.length;
+                });
+                await (0, promises_1.pipeline)(measureStream, fs.createWriteStream(dest));
                 tempPaths.push(dest);
             }
         }
@@ -135,7 +143,9 @@ async function ingestRoutes(app) {
                 error: 'No .log files received. Use form field name "logs" for each file.',
             });
         }
-        (0, converter_1.ingestFiles)(tempPaths, { deleteSourcesAfter: true }).catch(err => {
+        // Use consistent concurrency: 6 workers for normal loads, 10 for massive uploads (>20GB)
+        const concurrency = totalSize > 20_000_000_000 ? 10 : 6;
+        (0, converter_1.ingestFiles)(tempPaths, { deleteSourcesAfter: true, concurrency }).catch(err => {
             console.error('[route /ingest/upload] Unhandled error:', err);
         });
         return reply.code(202).send({
@@ -143,7 +153,7 @@ async function ingestRoutes(app) {
             data: {
                 accepted: tempPaths.length,
                 skipped: [],
-                message: 'Upload accepted. Ingestion started. Poll GET /ingest/status for progress.',
+                message: `Upload accepted (${(totalSize / 1024 / 1024 / 1024).toFixed(1)}GB). Ingestion started with ${concurrency} workers. Poll GET /ingest/status for progress.`,
             },
         });
     });

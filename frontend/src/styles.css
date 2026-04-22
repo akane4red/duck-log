@@ -86,6 +86,10 @@ button:disabled {
   border-radius: 12px;
 }
 
+.tableBox.compact {
+  max-height: 260px;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -143,6 +147,10 @@ thead th {
   margin-top: 12px;
 }
 
+.stats.dashboard {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .stats.compact {
   margin-top: 12px;
 }
@@ -166,11 +174,47 @@ thead th {
   font-family: Consolas, monospace;
 }
 
+.pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  border: 1px solid #4c638340;
+  background: #0f1929;
+  color: #edf4ff;
+  white-space: nowrap;
+}
+
+.pill.selected,
+.pill.queued {
+  color: #aac0dd;
+}
+
+.pill.processing {
+  color: #97f3de;
+  border-color: #35d0af66;
+}
+
+.pill.done {
+  color: #9fd7ff;
+  border-color: #79b8ff66;
+}
+
+.pill.error {
+  color: #ffb8b8;
+  border-color: #ff8f8f66;
+}
+
 .splitHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
+}
+
+.splitHeader h3 {
+  margin: 6px 0;
 }
 
 .queries {
@@ -250,11 +294,89 @@ thead th {
   color: #aac0dd;
 }
 
+.dashboardGrid {
+  margin-top: 14px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 2fr 1fr 1fr;
+}
+
+.chartCard {
+  padding: 14px;
+}
+
+.chartWrap {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.legend {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: #aac0dd;
+  font-size: 12px;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legendSwatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.barList {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.barRow {
+  display: grid;
+  grid-template-columns: 64px 1fr 84px;
+  gap: 10px;
+  align-items: center;
+}
+
+.barLabel {
+  color: #aac0dd;
+  font-size: 12px;
+}
+
+.barTrack {
+  height: 10px;
+  border-radius: 999px;
+  background: #0f1929;
+  border: 1px solid #4c638340;
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  background: linear-gradient(90deg, #35d0af, #79b8ff);
+}
+
+.barValue {
+  text-align: right;
+}
+
+.layout.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 @media (max-width: 1150px) {
   .layout,
+  .layout.three,
   .queries,
   .formGrid,
-  .stats {
+  .stats,
+  .dashboardGrid {
     grid-template-columns: 1fr;
   }
 }

@@ -1,6 +1,7 @@
 import { DuckDBConnection, DuckDBInstance } from '@duckdb/node-api';
 export declare function getDb(): Promise<DuckDBInstance>;
 export declare function getConnection(): Promise<DuckDBConnection>;
+export declare function createConnection(): Promise<DuckDBConnection>;
 /**
  * Run a query and return all rows as plain objects.
  * Wraps the callback-based DuckDB API in a Promise.

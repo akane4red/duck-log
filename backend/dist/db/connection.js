@@ -35,6 +35,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getDb = getDb;
 exports.getConnection = getConnection;
+exports.createConnection = createConnection;
 exports.query = query;
 exports.execute = execute;
 exports.closeDb = closeDb;
@@ -61,6 +62,9 @@ function getConnection() {
     }
     return _connPromise;
 }
+function createConnection() {
+    return getDb().then((db) => db.connect());
+}
 /**
  * Run a query and return all rows as plain objects.
  * Wraps the callback-based DuckDB API in a Promise.
@@ -68,7 +72,8 @@ function getConnection() {
 function query(sql) {
     return getConnection().then(async (conn) => {
         const reader = await conn.runAndReadAll(sql);
-        return reader.getRows();
+        const rows = reader.getRowObjectsJS();
+        return rows.map((row) => makeJsonSafe(row));
     });
 }
 /**
@@ -78,6 +83,26 @@ function execute(sql) {
     return getConnection().then(async (conn) => {
         await conn.run(sql);
     });
+}
+function makeJsonSafe(value) {
+    if (typeof value === 'bigint') {
+        const abs = value < 0n ? -value : value;
+        if (abs <= BigInt(Number.MAX_SAFE_INTEGER))
+            return Number(value);
+        return value.toString();
+    }
+    if (Array.isArray(value)) {
+        return value.map((item) => makeJsonSafe(item));
+    }
+    if (value && typeof value === 'object') {
+        const obj = value;
+        const out = {};
+        for (const [key, item] of Object.entries(obj)) {
+            out[key] = makeJsonSafe(item);
+        }
+        return out;
+    }
+    return value;
 }
 async function closeDb() {
     try {

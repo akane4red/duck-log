@@ -4,6 +4,7 @@ import multipart from '@fastify/multipart';
 import { filesRoutes } from './routes/files';
 import { ingestRoutes } from './routes/ingest';
 import { queryRoutes } from './routes/query';
+import { dashboardRoutes } from './routes/dashboard';
 import { uiRoutes } from './routes/ui';
 import { registerUnifiedView } from './ingestion/converter';
 import { closeDb } from './db/connection';
@@ -49,6 +50,7 @@ async function bootstrap(): Promise<void> {
   await app.register(filesRoutes);
   await app.register(ingestRoutes);
   await app.register(queryRoutes);
+  await app.register(dashboardRoutes);
   await app.register(uiRoutes);
 
   // Health check

@@ -46,49 +46,77 @@ export interface ParseResult {
 /**
  * Parse a single IIS .log file into normalized LogRow array.
  * Streams line-by-line so large files never fully load into memory.
+ * Optimized for speed: fast string splitting, minimal allocations.
  */
 export async function parseLogFile(
   filePath: string,
-  onProgress?: (linesRead: number) => void
+  onProgress?: (progress: { linesRead: number; bytesRead: number; totalBytes: number }) => void
 ): Promise<ParseResult> {
   const sourceName = path.basename(filePath);
   const rows: LogRow[] = [];
   const errors: string[] = [];
   let fieldNames: (keyof LogRow | null)[] = [];
+  let fieldCount = 0;
   let lineCount = 0;
   let errorCount = 0;
+  let bytesRead = 0;
+  const totalBytes = fs.statSync(filePath).size;
 
-  const fileStream = fs.createReadStream(filePath, { encoding: 'utf8' });
+  const fileStream = fs.createReadStream(filePath, { encoding: 'utf8', highWaterMark: 256 * 1024 });
   const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
+
+  fileStream.on('data', (chunk: string | Buffer) => {
+    bytesRead += Buffer.byteLength(chunk);
+    if (onProgress) {
+      onProgress({ linesRead: lineCount, bytesRead, totalBytes });
+    }
+  });
 
   for await (const line of rl) {
     lineCount++;
 
-    if (onProgress && lineCount % 50_000 === 0) {
-      onProgress(lineCount);
+    if (onProgress && lineCount % 100_000 === 0) {
+      onProgress({ linesRead: lineCount, bytesRead, totalBytes });
     }
 
-    // Skip blank lines
-    if (!line.trim()) continue;
+    // Fast path: skip blank lines without .trim()
+    if (line.length === 0 || line[0] === ' ' || line[0] === '\t') {
+      if (line.trim().length === 0) continue;
+    }
 
     // Parse #Fields directive — this can appear multiple times in one file
-    if (line.startsWith('#Fields:')) {
-      const rawFields = line.slice(8).trim().toLowerCase().split(/\s+/);
-      fieldNames = rawFields.map(f => FIELD_MAP[f] ?? null);
+    if (line[0] === '#') {
+      if (line.startsWith('#Fields:')) {
+        // Fast field parsing without regex
+        const fieldsStr = line.slice(8).trim().toLowerCase();
+        const rawFields = fieldsStr.split(/\s+/);
+        fieldNames = rawFields.map(f => FIELD_MAP[f] ?? null);
+        fieldCount = fieldNames.length;
+        continue;
+      }
+      // Skip other comment lines
       continue;
     }
 
-    // Skip other comment lines (#Software, #Version, #Date)
-    if (line.startsWith('#')) continue;
-
     // No fields header seen yet — skip data lines
-    if (fieldNames.length === 0) continue;
+    if (fieldCount === 0) continue;
 
-    const parts = line.split(' ');
-    if (parts.length !== fieldNames.length) {
+    // Fast space-based split (IIS format uses space delimiter)
+    const parts: string[] = [];
+    let start = 0;
+    for (let i = 0; i <= line.length; i++) {
+      if (i === line.length || line[i] === ' ') {
+        if (i > start) {
+          parts.push(line.slice(start, i));
+        }
+        start = i + 1;
+      }
+    }
+
+    if (parts.length !== fieldCount) {
       errorCount++;
       if (errors.length < 20) {
-        errors.push(`Line ${lineCount}: expected ${fieldNames.length} fields, got ${parts.length}`);
+        errors.push(`Line ${lineCount}: expected ${fieldCount} fields, got ${parts.length}`);
       }
       continue;
     }
@@ -96,7 +124,7 @@ export async function parseLogFile(
     try {
       const raw: Partial<Record<keyof LogRow, unknown>> = {};
 
-      for (let i = 0; i < fieldNames.length; i++) {
+      for (let i = 0; i < fieldCount; i++) {
         const key = fieldNames[i];
         if (!key) continue;
 
@@ -105,12 +133,10 @@ export async function parseLogFile(
         // IIS uses '-' for null/empty
         if (value === '-') {
           value = NULLABLE_FIELDS.has(key) ? null : value;
-        }
-
-        // Coerce numeric fields
-        if (NUMBER_FIELDS.has(key) && value !== null) {
-          const n = Number(value);
-          value = isNaN(n) ? 0 : n;
+        } else if (NUMBER_FIELDS.has(key)) {
+          // Fast number conversion
+          const n = +(value as string);
+          value = n === n ? n : 0; // NaN check
         }
 
         raw[key] = value;
@@ -152,7 +178,7 @@ export async function parseLogFile(
 
   return {
     rows,
-    field_count: fieldNames.length,
+    field_count: fieldCount,
     line_count: lineCount,
     error_count: errorCount,
     errors,

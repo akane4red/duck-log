@@ -9,6 +9,7 @@ const multipart_1 = __importDefault(require("@fastify/multipart"));
 const files_1 = require("./routes/files");
 const ingest_1 = require("./routes/ingest");
 const query_1 = require("./routes/query");
+const dashboard_1 = require("./routes/dashboard");
 const ui_1 = require("./routes/ui");
 const converter_1 = require("./ingestion/converter");
 const connection_1 = require("./db/connection");
@@ -48,6 +49,7 @@ async function bootstrap() {
     await app.register(files_1.filesRoutes);
     await app.register(ingest_1.ingestRoutes);
     await app.register(query_1.queryRoutes);
+    await app.register(dashboard_1.dashboardRoutes);
     await app.register(ui_1.uiRoutes);
     // Health check
     app.get('/health', async () => ({
