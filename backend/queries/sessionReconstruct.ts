@@ -1,4 +1,3 @@
-import { query } from '../db/connection';
 import { QueryHandler } from './index';
 
 export const sessionReconstructQuery: QueryHandler = {
@@ -15,7 +14,7 @@ export const sessionReconstructQuery: QueryHandler = {
     ],
   },
 
-  async run(params) {
+  async run(params, ctx) {
     const ip          = params.c_ip as string;
     const ua          = params.user_agent as string | null ?? null;
     const dateFrom    = params.date_from as string | null ?? null;
@@ -88,6 +87,6 @@ export const sessionReconstructQuery: QueryHandler = {
       ORDER BY session_id, datetime ASC
     `;
 
-    return query(sql);
+    return ctx.query(sql);
   },
 };

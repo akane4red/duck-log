@@ -1,4 +1,3 @@
-import { query } from '../db/connection';
 import { QueryHandler } from './index';
 
 export const slowRequestsQuery: QueryHandler = {
@@ -16,7 +15,7 @@ export const slowRequestsQuery: QueryHandler = {
     ],
   },
 
-  async run(params) {
+  async run(params, ctx) {
     const thresholdMs  = params.threshold_ms != null ? Number(params.threshold_ms) : null;
     const percentile   = Math.min(99, Math.max(1, Number(params.percentile ?? 95)));
     const uriFilter    = params.uri_filter as string | null ?? null;
@@ -75,6 +74,6 @@ export const slowRequestsQuery: QueryHandler = {
       LIMIT ${limit}
     `;
 
-    return query(sql);
+    return ctx.query(sql);
   },
 };

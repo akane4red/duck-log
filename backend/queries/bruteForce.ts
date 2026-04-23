@@ -1,4 +1,3 @@
-import { query } from '../db/connection';
 import { QueryHandler } from './index';
 
 export const bruteForceQuery: QueryHandler = {
@@ -16,7 +15,7 @@ export const bruteForceQuery: QueryHandler = {
     ],
   },
 
-  async run(params) {
+  async run(params, ctx) {
     const threshold    = Number(params.attempt_threshold ?? 10);
     const windowMins   = Number(params.time_window_minutes ?? 60);
     const statusCodes  = (params.status_codes as number[] | undefined) ?? [401, 403];
@@ -74,6 +73,6 @@ export const bruteForceQuery: QueryHandler = {
       LIMIT ${limit}
     `;
 
-    return query(sql);
+    return ctx.query(sql);
   },
 };

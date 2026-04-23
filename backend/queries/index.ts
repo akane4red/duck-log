@@ -14,7 +14,11 @@ import { geoIpQuery } from './geoip';
 
 export interface QueryHandler {
   descriptor: QueryDescriptor;
-  run: (params: Record<string, unknown>) => Promise<Record<string, unknown>[]>;
+  run: (params: Record<string, unknown>, ctx: QueryContext) => Promise<Record<string, unknown>[]>;
+}
+
+export interface QueryContext {
+  query: <T = Record<string, unknown>>(sql: string) => Promise<T[]>;
 }
 
 class QueryRegistry {

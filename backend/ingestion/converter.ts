@@ -1,7 +1,8 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import { parseLogFile } from './parser';
-import { createConnection, execute } from '../db/connection';
+import { getSessionConnection, sessionExecute } from '../db/sessionDb';
+import { ensureDefaultSession, getSessionParquetDir, touchIngestMeta } from '../sessions/store';
 import { IngestFileStatus, IngestStatus, LogRow } from '../shared/types';
 
 // ─────────────────────────────────────────────
@@ -9,27 +10,35 @@ import { IngestFileStatus, IngestStatus, LogRow } from '../shared/types';
 // Raw .log → Parquet + DuckDB view
 // ─────────────────────────────────────────────
 
-const PARQUET_DIR = path.resolve(process.env.PARQUET_DIR ?? './data/parquet');
+function blankStatus(): IngestStatus {
+  return {
+    running: false,
+    total_files: 0,
+    processed_files: 0,
+    active_files: 0,
+    current_files: [],
+    file_statuses: [],
+    total_bytes: 0,
+    processed_bytes: 0,
+    total_rows: 0,
+    current_file: null,
+    started_at: null,
+    finished_at: null,
+    duration_ms: null,
+    errors: [],
+  };
+}
 
-/** Global ingestion state — one job at a time */
-const status: IngestStatus = {
-  running: false,
-  total_files: 0,
-  processed_files: 0,
-  active_files: 0,
-  current_files: [],
-  file_statuses: [],
-  total_bytes: 0,
-  processed_bytes: 0,
-  total_rows: 0,
-  current_file: null,
-  started_at: null,
-  finished_at: null,
-  duration_ms: null,
-  errors: [],
-};
+/** Per-session ingestion state — one job per session at a time */
+const statusBySession = new Map<string, IngestStatus>();
 
 export function getIngestStatus(): IngestStatus {
+  const defaultId = ensureDefaultSession().id;
+  return getIngestStatusForSession(defaultId);
+}
+
+export function getIngestStatusForSession(sessionId: string): IngestStatus {
+  const status = statusBySession.get(sessionId) ?? blankStatus();
   return {
     ...status,
     current_files: [...status.current_files],
@@ -50,9 +59,17 @@ export type IngestFilesOptions = {
  * Non-blocking — returns immediately, progress via getIngestStatus().
  */
 export async function ingestFiles(filePaths: string[], options?: IngestFilesOptions): Promise<void> {
-  if (status.running) {
-    throw new Error('Ingestion already in progress');
-  }
+  const defaultId = ensureDefaultSession().id;
+  return ingestFilesForSession(defaultId, filePaths, options);
+}
+
+export async function ingestFilesForSession(
+  sessionId: string,
+  filePaths: string[],
+  options?: IngestFilesOptions
+): Promise<void> {
+  const status = statusBySession.get(sessionId) ?? blankStatus();
+  if (status.running) throw new Error('Ingestion already in progress');
 
   const concurrency = options?.concurrency ?? 6;
 
@@ -83,7 +100,9 @@ export async function ingestFiles(filePaths: string[], options?: IngestFilesOpti
 
   const startTime = Date.now();
 
-  fs.mkdirSync(PARQUET_DIR, { recursive: true });
+  const parquetDir = getSessionParquetDir(sessionId);
+  fs.mkdirSync(parquetDir, { recursive: true });
+  statusBySession.set(sessionId, status);
 
   // Run ingestion async — don't await so the route returns immediately
   (async () => {
@@ -150,12 +169,12 @@ export async function ingestFiles(filePaths: string[], options?: IngestFilesOpti
 
         // Write rows to Parquet via JSONL staging (much faster than SQL concatenation)
         const parquetPath = path.join(
-          PARQUET_DIR,
+          parquetDir,
           path.basename(filePath, '.log') + '.parquet'
         );
 
         const writeStart = Date.now();
-        await writeRowsToParquet(result.rows, parquetPath, (rowsWritten) => {
+        await writeRowsToParquet(sessionId, result.rows, parquetPath, (rowsWritten) => {
           status.total_rows = rowsWritten + (status.total_rows - result.rows.length);
         });
         const writeMs = Date.now() - writeStart;
@@ -211,7 +230,7 @@ export async function ingestFiles(filePaths: string[], options?: IngestFilesOpti
 
     // Register a unified view across ALL parquet files in the dir
     const registerStart = Date.now();
-    await registerUnifiedView();
+    await registerUnifiedViewForSession(sessionId);
     const registerMs = Date.now() - registerStart;
 
     status.running = false;
@@ -221,6 +240,7 @@ export async function ingestFiles(filePaths: string[], options?: IngestFilesOpti
     status.processed_bytes = status.total_bytes;
     status.finished_at = new Date().toISOString();
     status.duration_ms = Date.now() - startTime;
+    touchIngestMeta(sessionId, status.total_files, status.total_rows);
 
     console.log(
       `[ingest] Complete. ${status.total_rows.toLocaleString()} total rows `
@@ -238,10 +258,15 @@ export async function ingestFiles(filePaths: string[], options?: IngestFilesOpti
  * Bypasses intermediate JSONL file — directly creates Parquet.
  * ~2x faster than JSONL staging by eliminating extra disk I/O.
  */
-async function writeRowsToParquet(rows: LogRow[], parquetPath: string, onProgress?: (count: number) => void): Promise<void> {
+async function writeRowsToParquet(
+  sessionId: string,
+  rows: LogRow[],
+  parquetPath: string,
+  onProgress?: (count: number) => void
+): Promise<void> {
   if (rows.length === 0) return;
   const tempTableName = `_tmp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-  const conn = await createConnection();
+  const conn = await getSessionConnection(sessionId);
   
   try {
     await conn.run(`
@@ -312,7 +337,7 @@ async function writeRowsToParquet(rows: LogRow[], parquetPath: string, onProgres
     try {
       await conn.run(`DROP TABLE IF EXISTS ${tempTableName};`);
     } finally {
-      conn.closeSync();
+      // Keep session connection open (cached) for subsequent queries.
     }
   }
 }
@@ -323,18 +348,24 @@ async function writeRowsToParquet(rows: LogRow[], parquetPath: string, onProgres
  * Includes ANALYZE for better query planning.
  */
 export async function registerUnifiedView(): Promise<void> {
-  const files = fs.readdirSync(PARQUET_DIR)
+  const defaultId = ensureDefaultSession().id;
+  return registerUnifiedViewForSession(defaultId);
+}
+
+export async function registerUnifiedViewForSession(sessionId: string): Promise<void> {
+  const parquetDir = getSessionParquetDir(sessionId);
+  const files = fs.readdirSync(parquetDir)
     .filter(f => f.endsWith('.parquet'))
-    .map(f => path.join(PARQUET_DIR, f));
+    .map(f => path.join(parquetDir, f));
 
   if (files.length === 0) {
     console.warn('[ingest] No parquet files to register');
     return;
   }
 
-  const glob = path.join(PARQUET_DIR, '*.parquet');
+  const glob = path.join(parquetDir, '*.parquet');
 
-  await execute(`CREATE OR REPLACE VIEW logs AS SELECT * FROM read_parquet('${escapePathForSQL(glob)}')`);
+  await sessionExecute(sessionId, `CREATE OR REPLACE VIEW logs AS SELECT * FROM read_parquet('${escapePathForSQL(glob)}')`);
   
   // Note: ANALYZE cannot be used on views in DuckDB, only on base tables
   
@@ -360,7 +391,9 @@ function appendNullableVarchar(appender: {
 /** Check if parquet data already exists (for /files endpoint) */
 export function parquetExistsFor(logFileName: string): boolean {
   const parquetName = logFileName.replace(/\.log$/i, '.parquet');
-  return fs.existsSync(path.join(PARQUET_DIR, parquetName));
+  const defaultId = ensureDefaultSession().id;
+  const parquetDir = getSessionParquetDir(defaultId);
+  return fs.existsSync(path.join(parquetDir, parquetName));
 }
 
 

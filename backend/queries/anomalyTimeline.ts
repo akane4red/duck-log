@@ -1,4 +1,3 @@
-import { query } from '../db/connection';
 import { QueryHandler } from './index';
 
 export const anomalyTimelineQuery: QueryHandler = {
@@ -17,7 +16,7 @@ export const anomalyTimelineQuery: QueryHandler = {
     ],
   },
 
-  async run(params) {
+  async run(params, ctx) {
     const bucket       = ['minute', 'hour', 'day'].includes(params.bucket as string)
                           ? (params.bucket as string)
                           : 'hour';
@@ -91,6 +90,6 @@ export const anomalyTimelineQuery: QueryHandler = {
       ORDER BY bucket_time ASC
     `;
 
-    return query(sql);
+    return ctx.query(sql);
   },
 };

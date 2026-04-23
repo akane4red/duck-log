@@ -1,4 +1,3 @@
-import { query } from '../db/connection';
 import { geoProvider } from '../geo/provider';
 import { QueryHandler } from './index';
 
@@ -17,7 +16,7 @@ export const geoIpQuery: QueryHandler = {
     ],
   },
 
-  async run(params) {
+  async run(params, ctx) {
     const manualIps    = params.ips as string[] | null ?? null;
     const autoTopN     = Math.min(Number(params.auto_top_n ?? 50), 200);
     const flagCountries = new Set((params.flag_countries as string[] | null ?? []).map(c => c.toUpperCase()));
@@ -35,7 +34,7 @@ export const geoIpQuery: QueryHandler = {
       const dateFromClause = dateFrom ? `AND date >= '${dateFrom}'` : '';
       const dateToClause   = dateTo   ? `AND date <= '${dateTo}'`   : '';
 
-      const topIps = await query<{ c_ip: string }>(`
+      const topIps = await ctx.query<{ c_ip: string }>(`
         SELECT c_ip, COUNT(*) as cnt
         FROM logs
         WHERE c_ip IS NOT NULL AND c_ip != '-'
@@ -61,7 +60,7 @@ export const geoIpQuery: QueryHandler = {
     const dateFromClause = dateFrom ? `AND date >= '${dateFrom}'` : '';
     const dateToClause   = dateTo   ? `AND date <= '${dateTo}'`   : '';
 
-    const counts = await query<{
+    const counts = await ctx.query<{
       c_ip: string;
       total_requests: number;
       status_4xx: number;

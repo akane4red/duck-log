@@ -281,6 +281,20 @@ thead th {
 .resultTable {
   width: max-content;
   min-width: 100%;
+  table-layout: fixed;
+}
+
+.resultTable th,
+.resultTable td {
+  width: 220px;
+}
+
+.cellText {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .sortable {

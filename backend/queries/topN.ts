@@ -1,4 +1,3 @@
-import { query } from '../db/connection';
 import { QueryHandler } from './index';
 
 export const topNQuery: QueryHandler = {
@@ -17,7 +16,7 @@ export const topNQuery: QueryHandler = {
     ],
   },
 
-  async run(params) {
+  async run(params, ctx) {
     const ALLOWED_DIMENSIONS = new Set([
       'c_ip', 'uri_stem', 'user_agent', 'method', 'status', 's_ip', 'referer'
     ]);
@@ -71,6 +70,6 @@ export const topNQuery: QueryHandler = {
       LIMIT ${limit}
     `;
 
-    return query(sql);
+    return ctx.query(sql);
   },
 };

@@ -81,6 +81,16 @@ export interface ForensicOverview {
   }>;
 }
 
+export interface SessionInfo {
+  id: string;
+  name: string;
+  created_at: string;
+  last_ingest_at: string | null;
+  last_ingest_files: number;
+  last_ingest_rows: number;
+  parquet_files: number;
+}
+
 export type QueryParamType = "string" | "number" | "boolean" | "string[]" | "number[]";
 
 export interface QueryParam {

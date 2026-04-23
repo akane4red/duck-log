@@ -1,4 +1,3 @@
-import { query } from '../db/connection';
 import { QueryHandler } from './index';
 
 export const scannerQuery: QueryHandler = {
@@ -15,7 +14,7 @@ export const scannerQuery: QueryHandler = {
     ],
   },
 
-  async run(params) {
+  async run(params, ctx) {
     const uriThreshold  = Number(params.uri_threshold ?? 20);
     const windowMins    = Number(params.time_window_minutes ?? 60);
     const only404       = Boolean(params.include_404_only ?? false);
@@ -92,6 +91,6 @@ export const scannerQuery: QueryHandler = {
       LIMIT ${limit}
     `;
 
-    return query(sql);
+    return ctx.query(sql);
   },
 };

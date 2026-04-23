@@ -38,4 +38,6 @@ next-env.d.ts
 node_modules/
 data/parquet
 data/uploads
+data/sessions
+**/dist/
 # data/bench

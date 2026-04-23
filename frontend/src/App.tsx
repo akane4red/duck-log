@@ -17,7 +17,8 @@ import type {
   LogFileInfo,
   QueryDescriptor,
   QueryParam,
-  QueryResponse
+  QueryResponse,
+  SessionInfo
 } from "./types";
 
 type GenericRow = Record<string, unknown>;
@@ -120,6 +121,13 @@ function formatFileStateLabel(fileStatus: IngestFileStatus | undefined) {
 }
 
 export default function App() {
+  const [sessions, setSessions] = useState<SessionInfo[]>([]);
+  const [sessionId, setSessionId] = useState<string>(() => {
+    return window.localStorage.getItem("duck-log-session-id") ?? "";
+  });
+  const [newSessionName, setNewSessionName] = useState<string>("");
+  const [sessionMessage, setSessionMessage] = useState<string>("");
+
   const [healthOnline, setHealthOnline] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [scanMessage, setScanMessage] = useState<string>(
@@ -151,6 +159,7 @@ export default function App() {
   useEffect(() => {
     const run = async () => {
       setHealthOnline(await checkHealth());
+      void loadSessions();
       void loadIngestStatus();
       void loadQueries();
     };
@@ -172,6 +181,47 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ingestStatus.running, ingestStatus.total_files, ingestStatus.processed_files]);
 
+  useEffect(() => {
+    if (!sessionId) return;
+    window.localStorage.setItem("duck-log-session-id", sessionId);
+    void loadIngestStatus();
+    void loadOverview(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
+
+  async function loadSessions() {
+    setSessionMessage("");
+    try {
+      const data = await api<SessionInfo[]>("/sessions");
+      setSessions(data);
+      if (!sessionId && data.length > 0) {
+        setSessionId(data[0].id);
+      }
+    } catch (error) {
+      setSessionMessage((error as Error).message);
+    }
+  }
+
+  async function createSession() {
+    const name = newSessionName.trim();
+    if (!name) {
+      setSessionMessage("Enter a session name.");
+      return;
+    }
+    setSessionMessage("");
+    try {
+      const created = await api<SessionInfo>("/sessions", {
+        method: "POST",
+        body: JSON.stringify({ name })
+      });
+      setNewSessionName("");
+      await loadSessions();
+      setSessionId(created.id);
+    } catch (error) {
+      setSessionMessage((error as Error).message);
+    }
+  }
+
   async function loadQueries() {
     try {
       const data = await api<QueryDescriptor[]>("/queries");
@@ -185,7 +235,8 @@ export default function App() {
 
   async function loadIngestStatus() {
     try {
-      const status = await api<IngestStatus>("/ingest/status");
+      if (!sessionId) return;
+      const status = await api<IngestStatus>(`/sessions/${encodeURIComponent(sessionId)}/ingest/status`);
       setIngestStatus(status);
     } catch (error) {
       setIngestMessage((error as Error).message);
@@ -195,7 +246,10 @@ export default function App() {
   async function loadOverview(force = false) {
     setOverviewMessage("");
     try {
-      const data = await api<ForensicOverview>(`/dashboard/overview${force ? "?force=true" : ""}`);
+      if (!sessionId) return;
+      const data = await api<ForensicOverview>(
+        `/sessions/${encodeURIComponent(sessionId)}/dashboard/overview${force ? "?force=true" : ""}`
+      );
       setOverview(data);
     } catch (error) {
       setOverview(null);
@@ -242,6 +296,10 @@ export default function App() {
   }
 
   async function startIngestion() {
+    if (!sessionId) {
+      setIngestMessage("Create or select a session first.");
+      return;
+    }
     const selected = pickedRows.filter((r) => selectedKeys.has(pickedRowKey(r.file)));
     if (!selected.length) {
       setIngestMessage("Select at least one file.");
@@ -253,7 +311,7 @@ export default function App() {
       for (const row of selected) {
         formData.append("logs", row.file, row.file.name);
       }
-      await postMultipart<unknown>("/ingest/upload", formData);
+      await postMultipart<unknown>(`/sessions/${encodeURIComponent(sessionId)}/ingest/upload`, formData);
       setIngestMessage("Upload accepted — ingestion started.");
       await loadIngestStatus();
     } catch (error) {
@@ -263,6 +321,10 @@ export default function App() {
 
   async function runQuery() {
     if (!selectedQuery) return;
+    if (!sessionId) {
+      setQueryMessage("Create or select a session first.");
+      return;
+    }
     const payload: Record<string, unknown> = {};
 
     for (const param of selectedQuery.params) {
@@ -274,7 +336,7 @@ export default function App() {
     setQueryMessage(`Running ${selectedQuery.name}...`);
     try {
       const data = await api<QueryResponse<GenericRow>>(
-        `/query/${encodeURIComponent(selectedQuery.name)}`,
+        `/sessions/${encodeURIComponent(sessionId)}/query/${encodeURIComponent(selectedQuery.name)}`,
         {
           method: "POST",
           body: JSON.stringify(payload)
@@ -305,6 +367,46 @@ export default function App() {
           <Stat label="API Base" value={apiBaseUrl} mono />
         </div>
       </header>
+
+      <section className="card">
+        <div className="splitHeader">
+          <h2>0. Sessions</h2>
+          <div className="row">
+            <button onClick={() => void loadSessions()} className="ghost">
+              Reload Sessions
+            </button>
+          </div>
+        </div>
+        {sessionMessage ? <div className="errorBox">{sessionMessage}</div> : null}
+        <div className="row">
+          <select
+            value={sessionId}
+            onChange={(e) => setSessionId(e.target.value)}
+            disabled={sessions.length === 0}
+          >
+            {sessions.length === 0 ? (
+              <option value="">No sessions</option>
+            ) : (
+              sessions.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} ({s.parquet_files} parquet)
+                </option>
+              ))
+            )}
+          </select>
+          <input
+            value={newSessionName}
+            onChange={(e) => setNewSessionName(e.target.value)}
+            placeholder="New session name (case)"
+          />
+          <button onClick={createSession}>Create Session</button>
+        </div>
+        <div className="muted">
+          {sessions.find((s) => s.id === sessionId)
+            ? `Current session has ${sessions.find((s) => s.id === sessionId)!.parquet_files} parquet file(s).`
+            : "Select a session to view or ingest evidence."}
+        </div>
+      </section>
 
       <section className="layout">
         <article className="card">
@@ -750,7 +852,14 @@ const ResultsGrid = memo(function ResultsGrid({
       columnHelper.accessor((row) => row[key], {
         id: key,
         header: key,
-        cell: (ctx) => formatValue(ctx.getValue())
+        cell: (ctx) => {
+          const text = formatValue(ctx.getValue());
+          return (
+            <span className="cellText" title={text}>
+              {text}
+            </span>
+          );
+        }
       })
     );
   }, [data]);

@@ -5,9 +5,10 @@ import { filesRoutes } from './routes/files';
 import { ingestRoutes } from './routes/ingest';
 import { queryRoutes } from './routes/query';
 import { dashboardRoutes } from './routes/dashboard';
+import { sessionsRoutes } from './routes/sessions';
 import { uiRoutes } from './routes/ui';
-import { registerUnifiedView } from './ingestion/converter';
-import { closeDb } from './db/connection';
+import { ensureDefaultSession } from './sessions/store';
+import { closeAllSessionDbs } from './db/sessionDb';
 
 // ─────────────────────────────────────────────
 // Server bootstrap
@@ -48,6 +49,7 @@ async function bootstrap(): Promise<void> {
 
   // Routes
   await app.register(filesRoutes);
+  await app.register(sessionsRoutes);
   await app.register(ingestRoutes);
   await app.register(queryRoutes);
   await app.register(dashboardRoutes);
@@ -60,20 +62,14 @@ async function bootstrap(): Promise<void> {
     timestamp: new Date().toISOString(),
   }));
 
-  // On startup, register any parquet files that already exist from a previous session
-  // so queries work immediately without re-ingesting
-  try {
-    await registerUnifiedView();
-  } catch {
-    // No parquet files yet — that's fine, ingestion hasn't run
-    app.log.info('No existing parquet files found — waiting for first ingestion');
-  }
+  // Ensure a default session exists so users always have somewhere to start.
+  ensureDefaultSession();
 
   // Graceful shutdown
   const shutdown = async (signal: string) => {
     app.log.info(`Received ${signal} — shutting down`);
     await app.close();
-    await closeDb();
+    closeAllSessionDbs();
     process.exit(0);
   };
 
