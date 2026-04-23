@@ -394,3 +394,19 @@ thead th {
     grid-template-columns: 1fr;
   }
 }
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #4c638340;
+  border-top-color: #79b8ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

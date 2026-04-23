@@ -146,6 +146,7 @@ export default function App() {
   const [queryResult, setQueryResult] = useState<QueryResponse<GenericRow> | null>(null);
   const [overview, setOverview] = useState<ForensicOverview | null>(null);
   const [overviewMessage, setOverviewMessage] = useState<string>("");
+  const [overviewLoading, setOverviewLoading] = useState<boolean>(false);
 
   const selectedQuery = useMemo(
     () => queries.find((q) => q.name === selectedQueryName) ?? null,
@@ -244,9 +245,10 @@ export default function App() {
   }
 
   async function loadOverview(force = false) {
+    if (!sessionId) return;
     setOverviewMessage("");
+    setOverviewLoading(true);
     try {
-      if (!sessionId) return;
       const data = await api<ForensicOverview>(
         `/sessions/${encodeURIComponent(sessionId)}/dashboard/overview${force ? "?force=true" : ""}`
       );
@@ -254,6 +256,8 @@ export default function App() {
     } catch (error) {
       setOverview(null);
       setOverviewMessage((error as Error).message);
+    } finally {
+      setOverviewLoading(false);
     }
   }
 
@@ -617,13 +621,23 @@ export default function App() {
         <div className="splitHeader">
           <h2>4. Forensic Overview</h2>
           <div className="row">
-            <button onClick={() => void loadOverview(true)} className="ghost">
-              Refresh Overview
+            <button onClick={() => void loadOverview(true)} className="ghost" disabled={overviewLoading}>
+              {overviewLoading ? (
+                <div className="row">
+                  <span className="spinner"></span> Loading...
+                </div>
+              ) : (
+                "Refresh Overview"
+              )}
             </button>
           </div>
         </div>
         {overviewMessage ? <div className="errorBox">{overviewMessage}</div> : null}
-        {!overview ? (
+        {overviewLoading && !overview ? (
+          <div className="muted row">
+            <span className="spinner"></span> Loading overview data...
+          </div>
+        ) : !overview ? (
           <div className="muted">Ingest data to unlock the overview.</div>
         ) : (
           <>
