@@ -92,33 +92,239 @@ function pickedRowKey(file: File) {
   return `${file.name}\0${file.size}\0${file.lastModified}`;
 }
 
-function describeIngest(status: IngestStatus) {
+function describeIngest(status: IngestStatus, t: typeof translations["en"]) {
   if (status.running) {
     if (status.active_files > 0) {
-      return `Processing ${status.active_files} file(s) in parallel.`;
+      return t.descProcessing(status.active_files);
     }
-    return "Preparing ingestion...";
+    return t.descPreparing;
   }
   if (status.processed_files > 0 && status.processed_files === status.total_files) {
-    return `Completed ${status.processed_files} file(s).`;
+    return t.descCompleted(status.processed_files);
   }
-  return "Ready to ingest selected files.";
+  return t.descReady;
 }
 
-function formatFileStateLabel(fileStatus: IngestFileStatus | undefined) {
+function formatFileStateLabel(fileStatus: IngestFileStatus | undefined, t: typeof translations["en"]) {
   switch (fileStatus?.status) {
     case "processing":
-      return "Processing";
+      return t.stateProcessing;
     case "done":
-      return "Done";
+      return t.stateDone;
     case "error":
-      return "Error";
+      return t.stateError;
     case "queued":
-      return "Queued";
+      return t.stateQueued;
     default:
-      return "Selected";
+      return t.stateSelected;
   }
 }
+
+type Lang = "en" | "th";
+const translations = {
+  en: {
+    // Header
+    workspaceTitle: "IIS Forensics Workspace",
+    appTitle: "Duck Log",
+    appDesc: "Built for W3C Extended Log Format analysis with large evidence sets.",
+    online: "Online",
+    offline: "Offline",
+    idle: "Idle",
+    
+    // Sessions
+    section0: "0. Sessions",
+    reloadSessions: "Reload Sessions",
+    noSessions: "No sessions",
+    newSessionName: "New session name (case)",
+    createSession: "Create Session",
+    currentSessionHas: (n: number) => `Current session has ${n} parquet file(s).`,
+    selectSessionToView: "Select a session to view or ingest evidence.",
+
+    // Discover Files
+    section1: "1. Discover Files",
+    selectFiles: "Select Files",
+    scanDefault: "Select one or more IIS .log files.",
+    noFilesSelected: "No files selected.",
+    noLogFilesFound: "No .log files found in selection.",
+    loadedLogFiles: (n: number) => `Loaded ${n} .log file(s). Start ingestion uploads them to the backend (browser paths are not used on disk).`,
+    colName: "Name",
+    colStatus: "Status",
+    colModified: "Modified",
+    colSize: "Size",
+    noFilesLoaded: "No files loaded.",
+
+    // Ingest Progress
+    section2: "2. Ingest Progress",
+    startIngestion: "Start Ingestion",
+    refreshStatus: "Refresh Status",
+    statCompleted: "Completed",
+    statActive: "Active",
+    statRows: "Rows",
+    statCurrent: "Current",
+    statDuration: "Duration",
+    errSelectSession: "Create or select a session first.",
+    errSelectFile: "Select at least one file.",
+    uploadAccepted: "Upload accepted — ingestion started.",
+    descPreparing: "Preparing ingestion...",
+    descProcessing: (n: number) => `Processing ${n} file(s) in parallel.`,
+    descCompleted: (n: number) => `Completed ${n} file(s).`,
+    descReady: "Ready to ingest selected files.",
+
+    // States
+    stateProcessing: "Processing",
+    stateDone: "Done",
+    stateError: "Error",
+    stateQueued: "Queued",
+    stateSelected: "Selected",
+    unknown: "Unknown",
+
+    // Forensic Queries (Existing)
+    forensicQueries: "3. Forensic Queries",
+    reloadQueries: "Reload Queries",
+    runQuery: "Run Query",
+    running: "Running...",
+    noQueries: "No queries available.",
+    selectQuery: "Select a query.",
+    noParamsRequired: "This query requires no parameters. Click Run Query to execute.",
+    rows: "Rows:",
+    duration: "Duration:",
+    useDefault: "Use default",
+    filterQueries: "Filter queries by name...",
+    true: "true",
+    false: "false",
+
+    // Results Grid
+    filterVisible: "Filter visible results",
+    noQueryRows: "No query rows.",
+
+    // Forensic Overview
+    section4: "4. Forensic Overview",
+    refreshOverview: "Refresh Overview",
+    loadingOverview: "Loading overview data...",
+    ingestToUnlock: "Ingest data to unlock the overview.",
+    statRequests: "Requests",
+    statUniqueIPs: "Unique IPs",
+    statUniqueURIs: "Unique URIs",
+    statErrors: "Errors",
+    statAvgLatency: "Avg Latency",
+    statFirstSeen: "First Seen",
+    statLastSeen: "Last Seen",
+    statCharts: "Charts",
+    lightweight: "Lightweight (no raw rows)",
+    last48Hours: "Last 48 Hours",
+    reqAndErrPerHour: "Requests and errors per hour",
+    topStatus: "Top Status",
+    mostFrequentHTTP: "Most frequent HTTP codes",
+    topMethods: "Top Methods",
+    getPostMix: "GET/POST mix",
+    topClientIPs: "Top Client IPs",
+    topURIs: "Top URIs",
+    suspiciousIPs: "Suspicious IPs",
+    highDistinctURI: "High distinct URI probing (scanner-like)",
+    noRows: "No rows."
+  },
+  th: {
+    // Header
+    workspaceTitle: "พื้นที่ปฏิบัติงาน IIS Forensics",
+    appTitle: "Duck Log",
+    appDesc: "สร้างขึ้นสำหรับการวิเคราะห์ W3C Extended Log Format ที่มีข้อมูลหลักฐานขนาดใหญ่",
+    online: "ออนไลน์",
+    offline: "ออฟไลน์",
+    idle: "ไม่ได้ทำงาน",
+    
+    // Sessions
+    section0: "0. เซสชัน",
+    reloadSessions: "โหลดเซสชันใหม่",
+    noSessions: "ไม่มีเซสชัน",
+    newSessionName: "ชื่อเซสชันใหม่ (ตัวพิมพ์เล็ก/ใหญ่มีผล)",
+    createSession: "สร้างเซสชัน",
+    currentSessionHas: (n: number) => `เซสชันปัจจุบันมีไฟล์ parquet ${n} ไฟล์`,
+    selectSessionToView: "เลือกเซสชันเพื่อดูหรือนำเข้าหลักฐาน",
+
+    // Discover Files
+    section1: "1. ค้นหาไฟล์",
+    selectFiles: "เลือกไฟล์",
+    scanDefault: "เลือกไฟล์ IIS .log ตั้งแต่หนึ่งไฟล์ขึ้นไป",
+    noFilesSelected: "ไม่ได้เลือกไฟล์",
+    noLogFilesFound: "ไม่พบไฟล์ .log ในส่วนที่เลือก",
+    loadedLogFiles: (n: number) => `โหลดไฟล์ .log จำนวน ${n} ไฟล์ เริ่มต้นการนำเข้าข้อมูลเพื่ออัปโหลดไปยังระบบหลังบ้าน (ไม่ใช้ path จากเบราว์เซอร์)`,
+    colName: "ชื่อ",
+    colStatus: "สถานะ",
+    colModified: "แก้ไขล่าสุด",
+    colSize: "ขนาด",
+    noFilesLoaded: "ไม่มีไฟล์ถูกโหลด",
+
+    // Ingest Progress
+    section2: "2. ความคืบหน้าการนำเข้า",
+    startIngestion: "เริ่มการนำเข้า",
+    refreshStatus: "รีเฟรชสถานะ",
+    statCompleted: "เสร็จสิ้น",
+    statActive: "กำลังทำงาน",
+    statRows: "จำนวนแถว",
+    statCurrent: "ไฟล์ปัจจุบัน",
+    statDuration: "ระยะเวลา",
+    errSelectSession: "กรุณาสร้างหรือเลือกเซสชันก่อน",
+    errSelectFile: "กรุณาเลือกอย่างน้อยหนึ่งไฟล์",
+    uploadAccepted: "รับไฟล์แล้ว — เริ่มต้นการนำเข้า",
+    descPreparing: "กำลังเตรียมการนำเข้า...",
+    descProcessing: (n: number) => `กำลังประมวลผล ${n} ไฟล์พร้อมกัน`,
+    descCompleted: (n: number) => `เสร็จสิ้น ${n} ไฟล์`,
+    descReady: "พร้อมนำเข้าไฟล์ที่เลือก",
+
+    // States
+    stateProcessing: "กำลังประมวลผล",
+    stateDone: "เสร็จสิ้น",
+    stateError: "ข้อผิดพลาด",
+    stateQueued: "เข้าคิว",
+    stateSelected: "เลือกแล้ว",
+    unknown: "ไม่ทราบ",
+
+    // Forensic Queries (Existing)
+    forensicQueries: "3. การค้นหาข้อมูลเชิงลึก (Forensic Queries)",
+    reloadQueries: "โหลดคำสั่งใหม่",
+    runQuery: "รันคำสั่ง",
+    running: "กำลังรัน...",
+    noQueries: "ไม่มีคำสั่งให้ใช้งาน",
+    selectQuery: "กรุณาเลือกคำสั่ง",
+    noParamsRequired: "คำสั่งนี้ไม่ต้องการพารามิเตอร์ คลิก 'รันคำสั่ง' เพื่อทำงาน",
+    rows: "จำนวนแถว:",
+    duration: "ระยะเวลา:",
+    useDefault: "ค่าเริ่มต้น",
+    filterQueries: "ค้นหาคำสั่ง...",
+    true: "จริง (true)",
+    false: "เท็จ (false)",
+
+    // Results Grid
+    filterVisible: "กรองผลลัพธ์",
+    noQueryRows: "ไม่มีข้อมูลแถว",
+
+    // Forensic Overview
+    section4: "4. ภาพรวมการวิเคราะห์เชิงลึก (Forensic Overview)",
+    refreshOverview: "รีเฟรชภาพรวม",
+    loadingOverview: "กำลังโหลดข้อมูลภาพรวม...",
+    ingestToUnlock: "นำเข้าข้อมูลเพื่อดูภาพรวม",
+    statRequests: "จำนวนคำขอ",
+    statUniqueIPs: "IP ที่ไม่ซ้ำ",
+    statUniqueURIs: "URI ที่ไม่ซ้ำ",
+    statErrors: "ข้อผิดพลาด",
+    statAvgLatency: "ความหน่วงเฉลี่ย",
+    statFirstSeen: "พบครั้งแรก",
+    statLastSeen: "พบครั้งล่าสุด",
+    statCharts: "กราฟ",
+    lightweight: "แบบเบา (ไม่มีข้อมูลดิบ)",
+    last48Hours: "48 ชั่วโมงล่าสุด",
+    reqAndErrPerHour: "คำขอและข้อผิดพลาดต่อชั่วโมง",
+    topStatus: "สถานะสูงสุด",
+    mostFrequentHTTP: "รหัส HTTP ที่พบบ่อยที่สุด",
+    topMethods: "เมธอดสูงสุด",
+    getPostMix: "สัดส่วน GET/POST",
+    topClientIPs: "Client IP สูงสุด",
+    topURIs: "URI สูงสุด",
+    suspiciousIPs: "IP น่าสงสัย",
+    highDistinctURI: "การสแกน URI แบบสุ่ม (พฤติกรรมคล้ายสแกนเนอร์)",
+    noRows: "ไม่มีข้อมูล"
+  }
+};
 
 export default function App() {
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
@@ -147,6 +353,18 @@ export default function App() {
   const [overview, setOverview] = useState<ForensicOverview | null>(null);
   const [overviewMessage, setOverviewMessage] = useState<string>("");
   const [overviewLoading, setOverviewLoading] = useState<boolean>(false);
+
+  const [lang, setLang] = useState<Lang>("en");
+  const t = translations[lang];
+
+  const [isQueryRunning, setIsQueryRunning] = useState<boolean>(false);
+  const [querySearch, setQuerySearch] = useState<string>("");
+
+  const filteredQueries = useMemo(() => {
+    if (!querySearch) return queries;
+    const lower = querySearch.toLowerCase();
+    return queries.filter((q) => q.name.toLowerCase().includes(lower) || q.description.toLowerCase().includes(lower));
+  }, [queries, querySearch]);
 
   const selectedQuery = useMemo(
     () => queries.find((q) => q.name === selectedQueryName) ?? null,
@@ -268,7 +486,7 @@ export default function App() {
   function onFilesPicked(event: ChangeEvent<HTMLInputElement>) {
     const inputFiles = event.target.files;
     if (!inputFiles || inputFiles.length === 0) {
-      setScanMessage("No files selected.");
+      setScanMessage(t.noFilesSelected);
       return;
     }
 
@@ -291,22 +509,20 @@ export default function App() {
     setSelectedKeys(new Set(rows.map((r) => pickedRowKey(r.file))));
 
     if (rows.length === 0) {
-      setScanMessage("No .log files found in selection.");
+      setScanMessage(t.noLogFilesFound);
     } else {
-      setScanMessage(
-        `Loaded ${rows.length} .log file(s). Start ingestion uploads them to the backend (browser paths are not used on disk).`
-      );
+      setScanMessage(t.loadedLogFiles(rows.length));
     }
   }
 
   async function startIngestion() {
     if (!sessionId) {
-      setIngestMessage("Create or select a session first.");
+      setIngestMessage(t.errSelectSession);
       return;
     }
     const selected = pickedRows.filter((r) => selectedKeys.has(pickedRowKey(r.file)));
     if (!selected.length) {
-      setIngestMessage("Select at least one file.");
+      setIngestMessage(t.errSelectFile);
       return;
     }
     setIngestMessage("");
@@ -316,7 +532,7 @@ export default function App() {
         formData.append("logs", row.file, row.file.name);
       }
       await postMultipart<unknown>(`/sessions/${encodeURIComponent(sessionId)}/ingest/upload`, formData);
-      setIngestMessage("Upload accepted — ingestion started.");
+      setIngestMessage(t.uploadAccepted);
       await loadIngestStatus();
     } catch (error) {
       setIngestMessage((error as Error).message);
@@ -338,6 +554,7 @@ export default function App() {
     }
 
     setQueryMessage(`Running ${selectedQuery.name}...`);
+    setIsQueryRunning(true);
     try {
       const data = await api<QueryResponse<GenericRow>>(
         `/sessions/${encodeURIComponent(sessionId)}/query/${encodeURIComponent(selectedQuery.name)}`,
@@ -351,33 +568,49 @@ export default function App() {
     } catch (error) {
       setQueryResult(null);
       setQueryMessage((error as Error).message);
+    } finally {
+      setIsQueryRunning(false);
+    }
+  }
+
+  function handleQueryKeyDown(e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      void runQuery();
     }
   }
 
   return (
     <main className="page">
       <header className="hero card">
-        <div>
-          <div className="muted">IIS Forensics Workspace</div>
-          <h1>Duck Log</h1>
-          <p className="muted">
-            Built for W3C Extended Log Format analysis with large evidence sets.
-          </p>
+        <div className="splitHeader">
+          <div>
+            <div className="muted">{t.workspaceTitle}</div>
+            <h1>{t.appTitle}</h1>
+            <p className="muted">
+              {t.appDesc}
+            </p>
+          </div>
+          <div>
+            <button onClick={() => setLang(lang === "en" ? "th" : "en")} className="ghost">
+              {lang === "en" ? "🇹🇭 TH" : "🇬🇧 EN"}
+            </button>
+          </div>
         </div>
         <div className="stats">
-          <Stat label="API" value={healthOnline ? "Online" : "Offline"} />
+          <Stat label="API" value={healthOnline ? t.online : t.offline} />
           <Stat label="Queries" value={String(queries.length)} />
-          <Stat label="Ingest" value={ingestStatus.running ? "Running" : "Idle"} />
+          <Stat label="Ingest" value={ingestStatus.running ? t.running : t.idle} />
           <Stat label="API Base" value={apiBaseUrl} mono />
         </div>
       </header>
 
       <section className="card">
         <div className="splitHeader">
-          <h2>0. Sessions</h2>
+          <h2>{t.section0}</h2>
           <div className="row">
             <button onClick={() => void loadSessions()} className="ghost">
-              Reload Sessions
+              {t.reloadSessions}
             </button>
           </div>
         </div>
@@ -389,7 +622,7 @@ export default function App() {
             disabled={sessions.length === 0}
           >
             {sessions.length === 0 ? (
-              <option value="">No sessions</option>
+              <option value="">{t.noSessions}</option>
             ) : (
               sessions.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -401,22 +634,22 @@ export default function App() {
           <input
             value={newSessionName}
             onChange={(e) => setNewSessionName(e.target.value)}
-            placeholder="New session name (case)"
+            placeholder={t.newSessionName}
           />
-          <button onClick={createSession}>Create Session</button>
+          <button onClick={createSession}>{t.createSession}</button>
         </div>
         <div className="muted">
           {sessions.find((s) => s.id === sessionId)
-            ? `Current session has ${sessions.find((s) => s.id === sessionId)!.parquet_files} parquet file(s).`
-            : "Select a session to view or ingest evidence."}
+            ? t.currentSessionHas(sessions.find((s) => s.id === sessionId)!.parquet_files)
+            : t.selectSessionToView}
         </div>
       </section>
 
       <section className="layout">
         <article className="card">
-          <h2>1. Discover Files</h2>
+          <h2>{t.section1}</h2>
           <div className="row">
-            <button onClick={onSelectFiles}>Select Files</button>
+            <button onClick={onSelectFiles}>{t.selectFiles}</button>
             <input
               ref={fileInputRef}
               type="file"
@@ -447,17 +680,17 @@ export default function App() {
                       }}
                     />
                   </th>
-                  <th>Name</th>
-                  <th>Status</th>
-                  <th>Modified</th>
-                  <th>Size</th>
+                  <th>{t.colName}</th>
+                  <th>{t.colStatus}</th>
+                  <th>{t.colModified}</th>
+                  <th>{t.colSize}</th>
                 </tr>
               </thead>
               <tbody>
                 {pickedRows.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="emptyCell">
-                      No files loaded.
+                      {t.noFilesLoaded}
                     </td>
                   </tr>
                 ) : (
@@ -483,7 +716,7 @@ export default function App() {
                       <td>{row.info.name}</td>
                       <td>
                         <span className={`pill ${fileStatus?.status ?? "selected"}`}>
-                          {formatFileStateLabel(fileStatus)}
+                          {formatFileStateLabel(fileStatus, t)}
                         </span>
                       </td>
                       <td>{formatDate(row.info.modified_at)}</td>
@@ -498,28 +731,28 @@ export default function App() {
         </article>
 
         <article className="card">
-          <h2>2. Ingest Progress</h2>
+          <h2>{t.section2}</h2>
           <div className="row">
-            <button onClick={startIngestion}>Start Ingestion</button>
+            <button onClick={startIngestion}>{t.startIngestion}</button>
             <button onClick={() => void loadIngestStatus()} className="ghost">
-              Refresh Status
+              {t.refreshStatus}
             </button>
           </div>
-          <div className="muted">{describeIngest(ingestStatus)}</div>
+          <div className="muted">{describeIngest(ingestStatus, t)}</div>
           {ingestMessage ? <div className="notice">{ingestMessage}</div> : null}
           <div className="stats compact">
             <Stat
-              label="Completed"
+              label={t.statCompleted}
               value={`${ingestStatus.processed_files}/${ingestStatus.total_files}`}
             />
-            <Stat label="Active" value={String(ingestStatus.active_files)} />
-            <Stat label="Rows" value={formatNumber(ingestStatus.total_rows)} />
+            <Stat label={t.statActive} value={String(ingestStatus.active_files)} />
+            <Stat label={t.statRows} value={formatNumber(ingestStatus.total_rows)} />
             <Stat
-              label="Current"
+              label={t.statCurrent}
               value={ingestStatus.current_files.length > 0 ? ingestStatus.current_files.join(", ") : "-"}
               mono
             />
-            <Stat label="Duration" value={formatDuration(ingestStatus.duration_ms)} />
+            <Stat label={t.statDuration} value={formatDuration(ingestStatus.duration_ms)} />
           </div>
           {ingestStatus.errors.length > 0 && (
             <div className="errorBox">
@@ -533,23 +766,27 @@ export default function App() {
 
       <section className="card">
         <div className="splitHeader">
-          <h2>3. Forensic Queries</h2>
+          <h2>{t.forensicQueries}</h2>
           <div className="row">
             <button onClick={() => void loadQueries()} className="ghost">
-              Reload Queries
-            </button>
-            <button onClick={runQuery} disabled={!selectedQuery}>
-              Run Query
+              {t.reloadQueries}
             </button>
           </div>
         </div>
 
         <div className="queries">
           <aside className="queryList">
-            {queries.length === 0 ? (
-              <div className="emptyCell">No queries available.</div>
+            <input 
+              type="text" 
+              placeholder={t.filterQueries}
+              value={querySearch}
+              onChange={(e) => setQuerySearch(e.target.value)}
+              style={{ marginBottom: "8px", width: "100%" }}
+            />
+            {filteredQueries.length === 0 ? (
+              <div className="emptyCell">{t.noQueries}</div>
             ) : (
-              queries.map((query) => (
+              filteredQueries.map((query) => (
                 <button
                   key={query.name}
                   className={selectedQueryName === query.name ? "queryItem active" : "queryItem"}
@@ -567,9 +804,14 @@ export default function App() {
 
           <div>
             {!selectedQuery ? (
-              <div className="emptyCell">Select a query.</div>
+              <div className="emptyCell">{t.selectQuery}</div>
             ) : (
               <div className="formGrid">
+                {selectedQuery.params.length === 0 && (
+                  <div className="muted" style={{ gridColumn: "1 / -1" }}>
+                    {t.noParamsRequired}
+                  </div>
+                )}
                 {selectedQuery.params.map((param) => (
                   <label key={param.name}>
                     <span>
@@ -581,10 +823,12 @@ export default function App() {
                         onChange={(e) =>
                           setQueryParams((prev) => ({ ...prev, [param.name]: e.target.value }))
                         }
+                        onKeyDown={handleQueryKeyDown}
+                        disabled={isQueryRunning}
                       >
-                        <option value="">Use default</option>
-                        <option value="true">true</option>
-                        <option value="false">false</option>
+                        <option value="">{t.useDefault}</option>
+                        <option value="true">{t.true}</option>
+                        <option value="false">{t.false}</option>
                       </select>
                     ) : (
                       <input
@@ -593,10 +837,23 @@ export default function App() {
                         onChange={(e) =>
                           setQueryParams((prev) => ({ ...prev, [param.name]: e.target.value }))
                         }
+                        onKeyDown={handleQueryKeyDown}
+                        disabled={isQueryRunning}
                       />
                     )}
                   </label>
                 ))}
+                <div style={{ gridColumn: "1 / -1", marginTop: "10px" }}>
+                  <button onClick={runQuery} disabled={isQueryRunning}>
+                    {isQueryRunning ? (
+                      <div className="row">
+                        <span className="spinner"></span> {t.running}
+                      </div>
+                    ) : (
+                      t.runQuery
+                    )}
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -606,28 +863,28 @@ export default function App() {
           <div>{queryMessage}</div>
           <div className="row">
             <div>
-              Rows: <strong>{formatNumber(queryResult?.row_count ?? 0)}</strong>
+              {t.rows} <strong>{formatNumber(queryResult?.row_count ?? 0)}</strong>
             </div>
             <div>
-              Duration: <strong>{formatNumber(queryResult?.duration_ms ?? 0)} ms</strong>
+              {t.duration} <strong>{formatNumber(queryResult?.duration_ms ?? 0)} ms</strong>
             </div>
           </div>
         </div>
 
-        <ResultsGrid queryResult={queryResult} />
+        <ResultsGrid queryResult={queryResult} t={t} />
       </section>
 
       <section className="card">
         <div className="splitHeader">
-          <h2>4. Forensic Overview</h2>
+          <h2>{t.section4}</h2>
           <div className="row">
             <button onClick={() => void loadOverview(true)} className="ghost" disabled={overviewLoading}>
               {overviewLoading ? (
                 <div className="row">
-                  <span className="spinner"></span> Loading...
+                  <span className="spinner"></span> {t.loadingOverview}
                 </div>
               ) : (
-                "Refresh Overview"
+                t.refreshOverview
               )}
             </button>
           </div>
@@ -635,36 +892,36 @@ export default function App() {
         {overviewMessage ? <div className="errorBox">{overviewMessage}</div> : null}
         {overviewLoading && !overview ? (
           <div className="muted row">
-            <span className="spinner"></span> Loading overview data...
+            <span className="spinner"></span> {t.loadingOverview}
           </div>
         ) : !overview ? (
-          <div className="muted">Ingest data to unlock the overview.</div>
+          <div className="muted">{t.ingestToUnlock}</div>
         ) : (
           <>
             <div className="stats dashboard">
-              <Stat label="Requests" value={formatNumber(overview.totals.requests)} />
-              <Stat label="Unique IPs" value={formatNumber(overview.totals.unique_ips)} />
-              <Stat label="Unique URIs" value={formatNumber(overview.totals.unique_uris)} />
+              <Stat label={t.statRequests} value={formatNumber(overview.totals.requests)} />
+              <Stat label={t.statUniqueIPs} value={formatNumber(overview.totals.unique_ips)} />
+              <Stat label={t.statUniqueURIs} value={formatNumber(overview.totals.unique_uris)} />
               <Stat
-                label="Errors"
+                label={t.statErrors}
                 value={`${formatNumber(overview.totals.error_4xx)} 4xx / ${formatNumber(overview.totals.error_5xx)} 5xx`}
               />
-              <Stat label="Avg Latency" value={`${formatNumber(overview.totals.avg_time_taken_ms)} ms`} />
-              <Stat label="First Seen" value={formatDate(overview.totals.first_seen)} mono />
-              <Stat label="Last Seen" value={formatDate(overview.totals.last_seen)} mono />
-              <Stat label="Charts" value="Lightweight (no raw rows)" />
+              <Stat label={t.statAvgLatency} value={`${formatNumber(overview.totals.avg_time_taken_ms)} ms`} />
+              <Stat label={t.statFirstSeen} value={formatDate(overview.totals.first_seen)} mono />
+              <Stat label={t.statLastSeen} value={formatDate(overview.totals.last_seen)} mono />
+              <Stat label={t.statCharts} value={t.lightweight} />
             </div>
 
             <div className="dashboardGrid">
               <div className="card chartCard">
                 <div className="splitHeader">
-                  <h3>Last 48 Hours</h3>
-                  <div className="muted">Requests and errors per hour</div>
+                  <h3>{t.last48Hours}</h3>
+                  <div className="muted">{t.reqAndErrPerHour}</div>
                 </div>
                 <MiniLineChart
                   series={[
-                    { name: "Requests", values: overview.timeline.map((p) => p.requests) },
-                    { name: "Errors", values: overview.timeline.map((p) => p.errors) }
+                    { name: t.statRequests, values: overview.timeline.map((p) => p.requests) },
+                    { name: t.statErrors, values: overview.timeline.map((p) => p.errors) }
                   ]}
                   labels={overview.timeline.map((p) => p.bucket_time)}
                 />
@@ -672,8 +929,8 @@ export default function App() {
 
               <div className="card chartCard">
                 <div className="splitHeader">
-                  <h3>Top Status</h3>
-                  <div className="muted">Most frequent HTTP codes</div>
+                  <h3>{t.topStatus}</h3>
+                  <div className="muted">{t.mostFrequentHTTP}</div>
                 </div>
                 <MiniBarChart
                   items={overview.status_breakdown.map((r) => ({
@@ -685,8 +942,8 @@ export default function App() {
 
               <div className="card chartCard">
                 <div className="splitHeader">
-                  <h3>Top Methods</h3>
-                  <div className="muted">GET/POST mix</div>
+                  <h3>{t.topMethods}</h3>
+                  <div className="muted">{t.getPostMix}</div>
                 </div>
                 <MiniBarChart
                   items={overview.method_breakdown.map((r) => ({
@@ -699,25 +956,28 @@ export default function App() {
 
             <div className="layout three">
               <article className="card">
-                <h3>Top Client IPs</h3>
+                <h3>{t.topClientIPs}</h3>
                 <SmallTable
                   columns={["c_ip", "requests", "distinct_uris", "error_requests"]}
                   rows={overview.top_client_ips}
+                  t={t}
                 />
               </article>
               <article className="card">
-                <h3>Top URIs</h3>
+                <h3>{t.topURIs}</h3>
                 <SmallTable
                   columns={["uri_stem", "requests", "distinct_ips", "avg_time_taken_ms"]}
                   rows={overview.top_uris}
+                  t={t}
                 />
               </article>
               <article className="card">
-                <h3>Suspicious IPs</h3>
-                <div className="muted">High distinct URI probing (scanner-like)</div>
+                <h3>{t.suspiciousIPs}</h3>
+                <div className="muted">{t.highDistinctURI}</div>
                 <SmallTable
                   columns={["c_ip", "distinct_uris", "error_requests", "first_seen", "last_seen"]}
                   rows={overview.suspicious_ips}
+                  t={t}
                 />
               </article>
             </div>
@@ -810,10 +1070,12 @@ function MiniBarChart({ items }: { items: Array<{ label: string; value: number }
 
 function SmallTable({
   columns,
-  rows
+  rows,
+  t
 }: {
   columns: string[];
   rows: Array<Record<string, unknown>>;
+  t: typeof translations["en"];
 }) {
   return (
     <div className="tableBox compact">
@@ -829,7 +1091,7 @@ function SmallTable({
           {rows.length === 0 ? (
             <tr>
               <td colSpan={columns.length} className="emptyCell">
-                No rows.
+                {t.noRows}
               </td>
             </tr>
           ) : (
@@ -849,11 +1111,14 @@ function SmallTable({
   );
 }
 
-const ResultsGrid = memo(function ResultsGrid({
-  queryResult
-}: {
-  queryResult: QueryResponse<GenericRow> | null;
-}) {
+const ResultsGrid = memo(
+  function ResultsGrid({
+    queryResult,
+    t
+  }: {
+    queryResult: QueryResponse<GenericRow> | null;
+    t: typeof translations["en"];
+  }) {
   const [resultFilter, setResultFilter] = useState<string>("");
   const [sorting, setSorting] = useState<SortingState>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -911,7 +1176,7 @@ const ResultsGrid = memo(function ResultsGrid({
           <input
             value={resultFilter}
             onChange={(e) => setResultFilter(e.target.value)}
-            placeholder="Filter visible results"
+            placeholder={t.filterVisible}
           />
         </div>
       </div>
@@ -963,10 +1228,14 @@ const ResultsGrid = memo(function ResultsGrid({
             })}
           </tbody>
         </table>
-        {rows.length === 0 && <div className="emptyOverlay">No query rows.</div>}
+        {rows.length === 0 && <div className="emptyOverlay">{t.noQueryRows}</div>}
       </div>
     </>
   );
+},
+(prevProps, nextProps) => {
+  // Only re-render if queryResult changes, ignore t changes to prevent language switch freeze
+  return prevProps.queryResult === nextProps.queryResult;
 });
 
 function Stat({
