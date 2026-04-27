@@ -130,7 +130,7 @@ const translations = {
     online: "Online",
     offline: "Offline",
     idle: "Idle",
-    
+
     // Sessions
     section0: "0. Sessions",
     reloadSessions: "Reload Sessions",
@@ -230,13 +230,13 @@ const translations = {
     appDesc: "สร้างขึ้นสำหรับการวิเคราะห์ W3C Extended Log Format ที่มีข้อมูลหลักฐานขนาดใหญ่",
     online: "ออนไลน์",
     offline: "ออฟไลน์",
-    idle: "ไม่ได้ทำงาน",
-    
+    idle: "ว่าง",
+
     // Sessions
     section0: "0. เซสชัน",
     reloadSessions: "โหลดเซสชันใหม่",
     noSessions: "ไม่มีเซสชัน",
-    newSessionName: "ชื่อเซสชันใหม่ (ตัวพิมพ์เล็ก/ใหญ่มีผล)",
+    newSessionName: "ชื่อเซสชันใหม่ (ชื่อเคส)",
     createSession: "สร้างเซสชัน",
     currentSessionHas: (n: number) => `เซสชันปัจจุบันมีไฟล์ parquet ${n} ไฟล์`,
     selectSessionToView: "เลือกเซสชันเพื่อดูหรือนำเข้าหลักฐาน",
@@ -281,18 +281,18 @@ const translations = {
 
     // Forensic Queries (Existing)
     forensicQueries: "3. การค้นหาข้อมูลเชิงลึก (Forensic Queries)",
-    reloadQueries: "โหลดคำสั่งใหม่",
-    runQuery: "รันคำสั่ง",
+    reloadQueries: "โหลด Query ใหม่",
+    runQuery: "รัน Query",
     running: "กำลังรัน...",
-    noQueries: "ไม่มีคำสั่งให้ใช้งาน",
-    selectQuery: "กรุณาเลือกคำสั่ง",
-    noParamsRequired: "คำสั่งนี้ไม่ต้องการพารามิเตอร์ คลิก 'รันคำสั่ง' เพื่อทำงาน",
+    noQueries: "ไม่มี Query ให้ใช้งาน",
+    selectQuery: "กรุณาเลือก Query",
+    noParamsRequired: "Query นี้ไม่ต้องการพารามิเตอร์ คลิก 'รัน Query' เพื่อทำงาน",
     rows: "จำนวนแถว:",
     duration: "ระยะเวลา:",
     useDefault: "ค่าเริ่มต้น",
-    filterQueries: "ค้นหาคำสั่ง...",
-    true: "จริง (true)",
-    false: "เท็จ (false)",
+    filterQueries: "ค้นหา Query...",
+    true: "true",
+    false: "false",
 
     // Results Grid
     filterVisible: "กรองผลลัพธ์",
@@ -314,14 +314,14 @@ const translations = {
     lightweight: "แบบเบา (ไม่มีข้อมูลดิบ)",
     last48Hours: "48 ชั่วโมงล่าสุด",
     reqAndErrPerHour: "คำขอและข้อผิดพลาดต่อชั่วโมง",
-    topStatus: "สถานะสูงสุด",
+    topStatus: "Status ยอดนิยม",
     mostFrequentHTTP: "รหัส HTTP ที่พบบ่อยที่สุด",
-    topMethods: "เมธอดสูงสุด",
+    topMethods: "Method ยอดนิยม",
     getPostMix: "สัดส่วน GET/POST",
-    topClientIPs: "Client IP สูงสุด",
-    topURIs: "URI สูงสุด",
+    topClientIPs: "Client IP ยอดนิยม",
+    topURIs: "URI ยอดนิยม",
     suspiciousIPs: "IP น่าสงสัย",
-    highDistinctURI: "การสแกน URI แบบสุ่ม (พฤติกรรมคล้ายสแกนเนอร์)",
+    highDistinctURI: "เข้าถึง URI หลากหลาย (พฤติกรรมคล้าย Scanner)",
     noRows: "ไม่มีข้อมูล"
   }
 };
@@ -697,32 +697,32 @@ export default function App() {
                   pickedRows.map((row) => {
                     const fileStatus = fileStatusByName.get(row.info.name);
                     return (
-                    <tr key={pickedRowKey(row.file)}>
-                      <td>
-                        <input
-                          type="checkbox"
-                          checked={selectedKeys.has(pickedRowKey(row.file))}
-                          onChange={(e) => {
-                            const key = pickedRowKey(row.file);
-                            setSelectedKeys((prev) => {
-                              const next = new Set(prev);
-                              if (e.target.checked) next.add(key);
-                              else next.delete(key);
-                              return next;
-                            });
-                          }}
-                        />
-                      </td>
-                      <td>{row.info.name}</td>
-                      <td>
-                        <span className={`pill ${fileStatus?.status ?? "selected"}`}>
-                          {formatFileStateLabel(fileStatus, t)}
-                        </span>
-                      </td>
-                      <td>{formatDate(row.info.modified_at)}</td>
-                      <td>{row.info.size_mb.toFixed(2)} MB</td>
-                    </tr>
-                  );
+                      <tr key={pickedRowKey(row.file)}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={selectedKeys.has(pickedRowKey(row.file))}
+                            onChange={(e) => {
+                              const key = pickedRowKey(row.file);
+                              setSelectedKeys((prev) => {
+                                const next = new Set(prev);
+                                if (e.target.checked) next.add(key);
+                                else next.delete(key);
+                                return next;
+                              });
+                            }}
+                          />
+                        </td>
+                        <td>{row.info.name}</td>
+                        <td>
+                          <span className={`pill ${fileStatus?.status ?? "selected"}`}>
+                            {formatFileStateLabel(fileStatus, t)}
+                          </span>
+                        </td>
+                        <td>{formatDate(row.info.modified_at)}</td>
+                        <td>{row.info.size_mb.toFixed(2)} MB</td>
+                      </tr>
+                    );
                   })
                 )}
               </tbody>
@@ -776,8 +776,8 @@ export default function App() {
 
         <div className="queries">
           <aside className="queryList">
-            <input 
-              type="text" 
+            <input
+              type="text"
               placeholder={t.filterQueries}
               value={querySearch}
               onChange={(e) => setQuerySearch(e.target.value)}
@@ -1119,124 +1119,124 @@ const ResultsGrid = memo(
     queryResult: QueryResponse<GenericRow> | null;
     t: typeof translations["en"];
   }) {
-  const [resultFilter, setResultFilter] = useState<string>("");
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const containerRef = useRef<HTMLDivElement>(null);
+    const [resultFilter, setResultFilter] = useState<string>("");
+    const [sorting, setSorting] = useState<SortingState>([]);
+    const containerRef = useRef<HTMLDivElement>(null);
 
-  const data = queryResult?.rows ?? [];
-  const columns = useMemo(() => {
-    if (data.length === 0) return [];
-    const keys = Array.from(new Set(data.flatMap((row) => Object.keys(row))));
-    return keys.map((key) =>
-      columnHelper.accessor((row) => row[key], {
-        id: key,
-        header: key,
-        cell: (ctx) => {
-          const text = formatValue(ctx.getValue());
-          return (
-            <span className="cellText" title={text}>
-              {text}
-            </span>
-          );
-        }
-      })
-    );
-  }, [data]);
-
-  const table = useReactTable({
-    data,
-    columns,
-    state: { globalFilter: resultFilter, sorting },
-    onGlobalFilterChange: setResultFilter,
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    globalFilterFn: (row, _columnId, filterValue) => {
-      if (!filterValue) return true;
-      const text = String(filterValue).toLowerCase();
-      return Object.values(row.original).some((value) =>
-        formatValue(value).toLowerCase().includes(text)
+    const data = queryResult?.rows ?? [];
+    const columns = useMemo(() => {
+      if (data.length === 0) return [];
+      const keys = Array.from(new Set(data.flatMap((row) => Object.keys(row))));
+      return keys.map((key) =>
+        columnHelper.accessor((row) => row[key], {
+          id: key,
+          header: key,
+          cell: (ctx) => {
+            const text = formatValue(ctx.getValue());
+            return (
+              <span className="cellText" title={text}>
+                {text}
+              </span>
+            );
+          }
+        })
       );
-    }
-  });
+    }, [data]);
 
-  const rows = table.getRowModel().rows;
-  const rowVirtualizer = useVirtualizer({
-    count: rows.length,
-    getScrollElement: () => containerRef.current,
-    estimateSize: () => 36,
-    overscan: 24
-  });
+    const table = useReactTable({
+      data,
+      columns,
+      state: { globalFilter: resultFilter, sorting },
+      onGlobalFilterChange: setResultFilter,
+      onSortingChange: setSorting,
+      getCoreRowModel: getCoreRowModel(),
+      getFilteredRowModel: getFilteredRowModel(),
+      getSortedRowModel: getSortedRowModel(),
+      globalFilterFn: (row, _columnId, filterValue) => {
+        if (!filterValue) return true;
+        const text = String(filterValue).toLowerCase();
+        return Object.values(row.original).some((value) =>
+          formatValue(value).toLowerCase().includes(text)
+        );
+      }
+    });
 
-  return (
-    <>
-      <div className="resultMeta">
-        <div className="row">
-          <input
-            value={resultFilter}
-            onChange={(e) => setResultFilter(e.target.value)}
-            placeholder={t.filterVisible}
-          />
+    const rows = table.getRowModel().rows;
+    const rowVirtualizer = useVirtualizer({
+      count: rows.length,
+      getScrollElement: () => containerRef.current,
+      estimateSize: () => 36,
+      overscan: 24
+    });
+
+    return (
+      <>
+        <div className="resultMeta">
+          <div className="row">
+            <input
+              value={resultFilter}
+              onChange={(e) => setResultFilter(e.target.value)}
+              placeholder={t.filterVisible}
+            />
+          </div>
         </div>
-      </div>
-      <div ref={containerRef} className="virtualWrap">
-        <table className="resultTable">
-          <thead>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    onClick={header.column.getToggleSortingHandler()}
-                    className="sortable"
-                  >
-                    {flexRender(header.column.columnDef.header, header.getContext())}
-                    {header.column.getIsSorted() === "asc"
-                      ? " ▲"
-                      : header.column.getIsSorted() === "desc"
-                        ? " ▼"
-                        : ""}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody
-            style={{
-              height: `${rowVirtualizer.getTotalSize()}px`,
-              position: "relative"
-            }}
-          >
-            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const row = rows[virtualRow.index];
-              return (
-                <tr
-                  key={row.id}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    transform: `translateY(${virtualRow.start}px)`,
-                    width: "100%"
-                  }}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+        <div ref={containerRef} className="virtualWrap">
+          <table className="resultTable">
+            <thead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <th
+                      key={header.id}
+                      onClick={header.column.getToggleSortingHandler()}
+                      className="sortable"
+                    >
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                      {header.column.getIsSorted() === "asc"
+                        ? " ▲"
+                        : header.column.getIsSorted() === "desc"
+                          ? " ▼"
+                          : ""}
+                    </th>
                   ))}
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        {rows.length === 0 && <div className="emptyOverlay">{t.noQueryRows}</div>}
-      </div>
-    </>
-  );
-},
-(prevProps, nextProps) => {
-  // Only re-render if queryResult changes, ignore t changes to prevent language switch freeze
-  return prevProps.queryResult === nextProps.queryResult;
-});
+              ))}
+            </thead>
+            <tbody
+              style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                position: "relative"
+              }}
+            >
+              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const row = rows[virtualRow.index];
+                return (
+                  <tr
+                    key={row.id}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      transform: `translateY(${virtualRow.start}px)`,
+                      width: "100%"
+                    }}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {rows.length === 0 && <div className="emptyOverlay">{t.noQueryRows}</div>}
+        </div>
+      </>
+    );
+  },
+  (prevProps, nextProps) => {
+    // Only re-render if queryResult changes, ignore t changes to prevent language switch freeze
+    return prevProps.queryResult === nextProps.queryResult;
+  });
 
 function Stat({
   label,
